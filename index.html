@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VPN — подключение на iPhone</title>
+<style>
+:root{
+  --ink:#050507;
+  --ti-hi:#c4bfb6;
+  --ti-mid:#76716a;
+  --ti-lo:#2b2a28;
+  --glass:#000;
+  --tg-bg:#0f0f10;
+  --tg-bar:#212121;
+  --tg-bub:#212121;
+  --tg-btn:rgba(38,38,40,.96);
+  --code:#8fa8ff;
+  --g:#3ddc97;
+  --g-soft:#7fe0b8;
+  --txt:#f4f5f7;
+  --muted:#8b97a4;
+  --ui:-apple-system,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--ink);color:var(--txt);font-family:var(--ui);color-scheme:dark}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden}
+
+#wrap{position:relative;overflow:hidden;border-radius:14px;background:#000;box-shadow:0 0 0 1px #1b1b20}
+#stage{position:absolute;left:0;top:0;width:360px;height:640px;transform-origin:0 0;overflow:hidden;
+  background:radial-gradient(110% 60% at 50% 70%,#161a28 0%,#0a0b11 55%,#030304 100%)}
+#stage::before{content:"";position:absolute;left:-20%;right:-20%;top:62%;bottom:-10%;
+  background:linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.035) 40%,rgba(255,255,255,.08) 100%);
+  transform:perspective(500px) rotateX(55deg);transform-origin:top;opacity:0;transition:opacity 2s}
+#stage.floor::before{opacity:1}
+.orb{position:absolute;border-radius:50%;filter:blur(55px);pointer-events:none;opacity:.55}
+.o1{width:230px;height:230px;left:-80px;top:250px;background:#0d6a4b;animation:drift 15s ease-in-out infinite alternate}
+.o2{width:210px;height:210px;right:-80px;top:390px;background:#2a3c98;animation:drift 18s ease-in-out infinite alternate-reverse}
+@keyframes drift{to{transform:translate(40px,-50px)}}
+
+/* explanation panel */
+#info{position:absolute;left:20px;right:20px;top:18px;z-index:30;pointer-events:none;transition:opacity .35s,transform .35s}
+#info.swap{opacity:0;transform:translateY(6px)}
+#segs{display:flex;gap:4px;margin-bottom:11px}
+#segs i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.12);transition:background .5s}
+#segs i.on{background:var(--g)}
+#ititle{font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.2}
+#ibody{margin-top:6px;font-size:11.5px;line-height:1.45;color:#b4bccb;max-width:320px}
+#recap{display:none;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:11px}
+#recap span{font-size:9.5px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(61,220,151,.12);border:1px solid rgba(61,220,151,.35);color:#9af0c8}
+#info.final{top:24px;text-align:center}
+#info.final #segs{display:none}
+#info.final #ititle{font-size:21px;line-height:1.25}
+#info.final #ibody{margin-left:auto;margin-right:auto;font-size:12px}
+#info.final #recap{display:flex}
+#info.hidden{opacity:0}
+
+#rig{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform-origin:50% 50%}
+#phone{position:relative;width:250px;height:520px;border-radius:46px;padding:5px;
+  background:linear-gradient(135deg,var(--ti-hi) 0%,var(--ti-mid) 22%,var(--ti-lo) 45%,var(--ti-mid) 70%,var(--ti-hi) 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.22) inset,0 0 0 2px #0a0a0a inset,0 30px 70px rgba(0,0,0,.7),0 0 120px rgba(120,150,220,.08);
+  opacity:0;transform:translateY(26px) scale(.96);transition:opacity 1.2s ease,transform 1.6s cubic-bezier(.2,.7,.2,1)}
+#phone.in{opacity:1;transform:none}
+#phone::before,#phone::after{content:"";position:absolute;width:3px;background:linear-gradient(180deg,var(--ti-hi),var(--ti-lo));border-radius:2px}
+#phone::before{left:-3px;top:110px;height:54px}
+#phone::after{right:-3px;top:140px;height:76px}
+#phone.gloss{-webkit-box-reflect:below 6px linear-gradient(transparent 62%,rgba(255,255,255,.16))}
+
+/* screen: black bezel inside titanium, concentric radius */
+#screen{position:relative;width:100%;height:100%;border-radius:41px;overflow:hidden;background:#000;isolation:isolate;box-shadow:0 0 0 2px #000}
+/* Dynamic Island */
+#island{position:absolute;top:10px;left:50%;width:78px;height:23px;margin-left:-39px;border-radius:12px;background:#000;z-index:60}
+#island::before{content:"";position:absolute;right:9px;top:6.5px;width:10px;height:10px;border-radius:50%;
+  background:radial-gradient(circle at 36% 34%,#2c3a5c 0,#0d1224 42%,#000 72%);box-shadow:0 0 0 1px rgba(255,255,255,.04)}
+#island::after{content:"";position:absolute;left:12px;top:9px;width:5px;height:5px;border-radius:50%;background:radial-gradient(circle,#161a26,#000 70%)}
+#status{position:absolute;top:0;left:0;right:0;height:43px;z-index:55;display:flex;justify-content:space-between;align-items:center;padding:0 26px 0 30px;font-size:11.5px;font-weight:600;letter-spacing:-.01em;pointer-events:none}
+#status .r{display:flex;align-items:center;gap:5px}
+#vpnbadge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:7px;background:#fff;color:#000;opacity:0;transform:scale(.7);transition:all .5s}
+#vpnbadge.on{opacity:1;transform:none}
+#homebar{position:absolute;bottom:6px;left:50%;width:84px;height:3px;margin-left:-42px;background:#fff;border-radius:2px;opacity:.85;z-index:60}
+#glare{position:absolute;inset:0;z-index:70;pointer-events:none;border-radius:41px;background:linear-gradient(115deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 28%)}
+
+.app{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .5s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+.app.on{opacity:1}
+
+/* home + mountains wallpaper */
+#home{transform:none;padding:68px 18px 0}
+#home.off{transform:scale(1.15);opacity:0}
+#home .wall{position:absolute;inset:0;width:100%;height:100%}
+.grid{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:16px 10px}
+.ico{aspect-ratio:1;border-radius:13px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center}
+.ico.tg{background:linear-gradient(180deg,#37aee2,#1e96c8)}
+.ico.a{background:linear-gradient(160deg,rgba(80,84,120,.7),rgba(40,42,70,.7))}
+.ico.b{background:linear-gradient(160deg,rgba(110,80,100,.7),rgba(60,40,60,.7))}
+.ico.c{background:linear-gradient(160deg,rgba(70,100,110,.7),rgba(30,52,62,.7))}
+
+/* telegram */
+#tg{background:var(--tg-bg);transform:scale(.92);padding-top:44px;display:flex;flex-direction:column}
+#tg.on{transform:none}
+.tghead{height:44px;background:var(--tg-bar);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none;border-bottom:1px solid #000}
+.tghead .back{color:#8aa4c8;font-size:20px;line-height:1}
+.av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#3ddc97,#1a8f68);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#04170f}
+.tghead .nm{font-size:12px;font-weight:600;line-height:1.15}
+.tghead .st{font-size:9px;color:var(--muted)}
+#msgs{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;padding:8px 7px;overflow:hidden;
+  background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1.2px);background-size:13px 13px}
+.m{max-width:95%;opacity:0;transform:translateY(8px);transition:all .4s cubic-bezier(.2,.7,.2,1)}
+.m.in{opacity:1;transform:none}
+.m.me{align-self:flex-end}
+.m.bot{align-self:flex-start;width:95%}
+.b{position:relative;padding:6px 34px 6px 8px;border-radius:11px;font-size:10.2px;line-height:1.34;background:var(--tg-bub)}
+.me .b{background:#2b5278;border-bottom-right-radius:4px;width:fit-content;margin-left:auto;font-size:11px}
+.bot .b{border-bottom-left-radius:4px}
+.b .sp{height:5px}
+.b code{font-family:ui-monospace,Consolas,monospace;color:var(--code);background:rgba(255,255,255,.06);padding:0 3px;border-radius:3px;font-size:9.4px}
+.b code.url{display:block;margin-top:2px;padding:3px 5px;border-left:2px solid #e8833a;font-size:8.4px;word-break:break-all}
+.tm{position:absolute;right:7px;bottom:3px;font-size:7.5px;color:rgba(255,255,255,.4)}
+.kb{margin-top:3px;display:flex;flex-direction:column;gap:3px}
+.kbtn{position:relative;font-size:10.2px;font-weight:600;color:#fff;background:var(--tg-btn);padding:6px 8px;border-radius:7px;text-align:center;transition:filter .12s,transform .12s}
+.kbtn.ext::after{content:"↗";position:absolute;right:5px;top:1px;font-size:8px;opacity:.7}
+.pressed{filter:brightness(1.7);transform:scale(.97)}
+.hl{outline:2px solid rgba(255,255,255,.95);outline-offset:2px;animation:hl 1s ease-in-out infinite}
+@keyframes hl{0%,100%{box-shadow:0 0 0 3px rgba(61,220,151,.15)}50%{box-shadow:0 0 0 7px rgba(61,220,151,.38)}}
+.dots{display:flex;gap:3px;padding:3px 0}
+.dots i{width:5px;height:5px;border-radius:50%;background:#8fa3b8;animation:bl 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,60%,100%{opacity:.3;transform:none}30%{opacity:1;transform:translateY(-2px)}}
+.tginput{flex:none;height:44px;background:var(--tg-bar);display:flex;align-items:center;gap:8px;padding:0 10px 8px}
+#inp{flex:1;height:26px;border-radius:13px;background:#0f0f10;padding:0 11px;display:flex;align-items:center;font-size:11px;white-space:nowrap;overflow:hidden}
+#inp:empty::before{content:"Сообщение";color:#5b6874}
+.send{width:26px;height:26px;border-radius:50%;background:#4a90e2;display:flex;align-items:center;justify-content:center;opacity:.35;transition:opacity .2s}
+.send.act{opacity:1}
+
+/* web page sheet (in Telegram) */
+#install{top:48px;border-radius:16px 16px 0 0;background:#05070d;transform:translateY(60px);overflow:hidden;box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+#install.on{transform:none}
+.sheet-bar{height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:10px;font-weight:600;background:#0c0f18;border-bottom:1px solid #151a28;position:relative;z-index:3}
+.sheet-bar span{color:#8895ab;font-weight:500}
+#pg{position:relative;padding:10px 10px 30px;transition:transform 1.2s cubic-bezier(.45,.05,.2,1)}
+.phead{display:flex;align-items:center;justify-content:space-between;border:1px solid #171d2d;border-radius:12px;background:#080b14;padding:9px 10px;margin-bottom:10px}
+.phead b{display:block;font-size:13px;letter-spacing:.01em}
+.phead span.sub{display:block;margin-top:2px;font-size:6.5px;letter-spacing:.14em;color:#6c7893}
+.pbtns{display:flex;gap:4px}
+.pb{width:24px;height:22px;border-radius:7px;border:1px solid #232b40;background:#0b0f1a;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;font-style:normal;color:#dfe5f2}
+.pb.w{width:28px}
+.card{border:1px solid #1a2132;border-radius:14px;background:linear-gradient(180deg,#0d1220,#090d18);padding:10px;margin-bottom:10px}
+.lab{font-size:7.5px;letter-spacing:.09em;color:#6c7893;text-transform:uppercase}
+.tiles{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:5px;margin-top:6px}
+.tile{border:1px solid #1b2234;border-radius:8px;padding:6px 6px;background:#0a0e19}
+.tile.ok{border-color:#1d6b52;background:#0b2a22}
+.tile b{display:block;margin-top:3px;font-size:9px}
+.tile.ok b{color:#6df0b8}
+.idbox{margin-top:8px;border:1px solid #1b2234;border-radius:9px;padding:8px;background:#05070d;text-align:center}
+.idbox b{display:block;margin-top:2px;font-size:22px;letter-spacing:.04em;font-family:ui-monospace,Consolas,monospace}
+.pgh{display:flex;justify-content:space-between;align-items:center;position:relative}
+.pgh b{font-size:12px}
+.pill{font-size:8.5px;font-weight:600;border:1px solid #2a3350;border-radius:9px;padding:4px 9px;color:#e6ebf7;background:#0a0e19;transition:filter .12s,transform .12s}
+.dd{display:none;position:absolute;right:0;top:27px;width:112px;z-index:6;border:1px solid #2a3350;border-radius:11px;background:#0b0f1a;padding:4px;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+.dd.on{display:block;animation:vin .25s ease both}
+.dd div{display:flex;align-items:center;justify-content:space-between;font-size:8.5px;color:#aab3c6;padding:5px 7px;border-radius:7px}
+.dd div.sep{height:1px;padding:0;margin:3px 4px;background:#1c2338}
+.dd div.cur{color:#fff;font-weight:700}
+.dd div.cur::after{content:"✓";color:#3dd6c6}
+.chips{display:grid;grid-template-columns:1.1fr 1fr;gap:5px;margin:9px 0 10px}
+.chip{border:1px solid #1b2234;border-radius:10px;padding:6px 7px;display:flex;align-items:center;gap:6px;background:#0a0e19}
+.chip.on{border-color:#1f7a57;background:linear-gradient(90deg,#0b2a22,#0a1a18)}
+.chip .mini{width:20px;height:20px;border-radius:5px;background:#0b1a14;border:1px solid #1f6b4a;color:#3dff9a;font-size:5.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.chip.h .mini{background:linear-gradient(135deg,#3a7bff,#2358d6);border-color:#3a7bff;color:#fff;font-size:9px}
+.chip b{display:block;font-size:9px}
+.chip span{font-size:6.5px;color:#7f8aa3}
+.stp{position:relative;display:flex;gap:8px;padding-bottom:10px}
+.stp .n{width:18px;height:18px;border-radius:50%;flex:none;border:1px solid #3a3470;background:#171436;color:#b6a8ff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.stp .n.d{border-color:#1f7a57;background:#0b2a22;color:#6df0b8}
+.stp h4{font-size:10px;margin-bottom:2px}
+.stp p{font-size:8px;line-height:1.4;color:#7f8aa3}
+.sbtn{display:inline-flex;align-items:center;gap:5px;margin-top:6px;border:1px solid #2a3350;border-radius:8px;background:#05070d;padding:5px 9px;font-size:8px;color:#cdd5e5;transition:filter .12s,transform .12s}
+.sbtn b{display:block;font-size:10px;color:#fff;line-height:1}
+.sbtn small{display:block;font-size:5.5px;letter-spacing:.06em;color:#8895ab;margin-bottom:1px}
+.gbtn{display:inline-block;margin-top:6px;border-radius:9px;padding:7px 14px;font-size:9.5px;font-weight:700;color:#fff;background:linear-gradient(90deg,#26b8e6,#8a6df0);box-shadow:0 4px 16px rgba(110,110,255,.4);transition:filter .12s,transform .12s}
+
+/* app store sheet */
+#asheet{position:absolute;left:0;right:0;bottom:0;z-index:48;border-radius:18px 18px 0 0;background:rgba(36,36,40,.96);backdrop-filter:blur(20px);padding:14px 14px 28px;transform:translateY(105%);transition:transform .5s cubic-bezier(.2,.7,.2,1);box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+#asheet.on{transform:none}
+#asheet .rw{display:flex;align-items:center;gap:10px}
+.aico{width:44px;height:44px;border-radius:11px;flex:none;background:#0b1a14;border:1px solid #1f6b4a;color:#3dff9a;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;letter-spacing:.03em;box-shadow:0 4px 14px rgba(40,200,130,.25)}
+#asheet b{font-size:13px;display:block}
+#asheet span{font-size:9px;color:var(--muted)}
+.getbtn{margin-left:auto;min-width:56px;height:26px;border-radius:13px;background:#3a3a40;color:#5ab0ff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;transition:filter .12s,transform .12s}
+.ring{stroke-dasharray:63;stroke-dashoffset:63;transition:stroke-dashoffset 2.2s linear}
+.ring.go{stroke-dashoffset:4}
+
+/* INCY */
+#incy{background:radial-gradient(120% 45% at 50% 0%,#0f2a22 0%,#08130f 60%,#060d0b 100%);transform:scale(.7);overflow:hidden}
+#incy.on{transform:none}
+#itop{position:absolute;top:0;left:0;right:0;height:46px;z-index:4;background:linear-gradient(#0a1a14 72%,rgba(10,26,20,0));pointer-events:none}
+#iscroll{position:absolute;left:10px;right:10px;top:48px;transition:transform .55s cubic-bezier(.4,.1,.2,1)}
+.itabs{display:flex;justify-content:center;gap:6px}
+.tab{font-size:8.5px;font-weight:700;padding:3px 9px;border-radius:8px;border:1px solid #2a4a3d;color:#9fd8c0}
+.tab.on{background:#0d3a2b;border-color:#2f8a67;color:#7fe0b8}
+#pwr{margin:12px auto 7px;width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#10261d,#0a1713);border:1px solid #1d3d31;transition:all .5s;position:relative}
+#pwr svg{stroke:var(--g-soft);transition:stroke .5s}
+#pwr.busy{border-color:#f0b24a;animation:pulse 1.1s infinite}
+#pwr.busy svg{stroke:#f0b24a}
+#pwr.live{border-color:var(--g);background:radial-gradient(circle,#14513a,#0d2a20);box-shadow:0 0 34px rgba(61,220,151,.5)}
+#pwr.live svg{stroke:#b6ffdd}
+@keyframes pulse{50%{box-shadow:0 0 22px rgba(240,178,74,.5)}}
+#pst{text-align:center;font-size:10px;color:#87b8a4;transition:color .4s;margin-bottom:9px}
+#pst.live{color:var(--g);font-weight:700}
+.note{border:1px solid #4a4020;border-radius:9px;background:rgba(80,64,20,.18);padding:6px 8px;font-size:7.4px;line-height:1.4;color:#d8cfa6;margin-bottom:8px}
+.irow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.ibtn{text-align:center;font-size:9px;font-weight:600;padding:7px 0;border-radius:9px;background:#0c1f18;border:1px solid #17352a;color:#cfeee0}
+.ilab{font-size:7.5px;letter-spacing:.08em;color:#6fa08c;margin:0 2px 5px}
+.icard{border:1px solid #15332a;border-radius:12px;background:#09150f;padding:7px}
+.ihd{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.ihd .star{width:22px;height:22px;border-radius:7px;background:#1c2a1d;border:1px solid #3a4a2a;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:10px;color:#e5c97a}
+.ihd .hn{flex:1;min-width:0}
+.ihd .hn b{display:block;font-size:9.5px;color:#e5c97a}
+.ihd .hn small{font-size:6.5px;color:#7fa090}
+.cnt{font-size:7.5px;font-weight:700;color:#9af0c8;background:#0f3326;border-radius:8px;padding:2px 6px}
+.ic{width:20px;height:20px;border-radius:7px;border:1px solid #1f4a38;background:#0c1f18;display:flex;align-items:center;justify-content:center;font-size:9px;color:#9fd8c0;transition:filter .12s,transform .12s}
+#ld{height:150px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:9.5px;color:#9fd8c0}
+#ld i{width:12px;height:12px;border-radius:50%;border:2px solid #1f4a38;border-top-color:var(--g);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#rows{display:none;flex-direction:column;gap:3px}
+#rows.on{display:flex;animation:vin .5s ease both}
+@keyframes vin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.srv{display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:9px;border:1px solid transparent;transition:all .35s}
+.srv.sel{border-color:#2f8a67;background:#10261d}
+.srv.best:not(.sel){border-color:#3a7a5a;background:#0c2219}
+.srv .t{flex:1;min-width:0}
+.srv .t b{display:block;font-size:9px;font-weight:600}
+.srv .t span{font-size:6.5px;color:#c9c04a}
+.srv .p{font-size:7.5px;color:#cdd5e5;display:flex;align-items:center;gap:3px;min-width:46px;justify-content:flex-end}
+.srv .dot{width:5px;height:5px;border-radius:50%;background:#4a5a52}
+.srv .dot.y{background:#e8c93a}
+.srv .dot.g{background:#35d07f}
+.srv.testing .v{animation:blink .7s infinite}
+@keyframes blink{50%{opacity:.25}}
+.srv .bt{display:none;font-style:normal;font-size:6.5px;font-weight:800;color:#04170f;background:var(--g);border-radius:6px;padding:1px 5px;margin-right:3px}
+.srv.best .bt{display:inline-block}
+.fl{width:16px;height:16px;border-radius:50%;flex:none;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;font-size:8px;color:#ffd23f;font-style:normal}
+.fl.eu{background:#1a47b8}
+.fl.ch{background:#d52b1e}
+.fl.ch::before{content:"";position:absolute;width:8px;height:2.6px;background:#fff}
+.fl.ch::after{content:"";position:absolute;width:2.6px;height:8px;background:#fff}
+.fl.ro{background:linear-gradient(90deg,#002b7f 33%,#fcd116 33% 66%,#ce1126 66%)}
+.fl.nl{background:linear-gradient(180deg,#ae1c28 33%,#fff 33% 66%,#21468b 66%)}
+.fl.ee{background:linear-gradient(180deg,#0072ce 33%,#000 33% 66%,#fff 66%)}
+.fl.fr{background:linear-gradient(90deg,#0055a4 33%,#fff 33% 66%,#ef4135 66%)}
+.fl.gb{background:linear-gradient(#c8102e,#c8102e) center/100% 3px no-repeat,linear-gradient(#c8102e,#c8102e) center/3px 100% no-repeat,linear-gradient(#fff,#fff) center/100% 6px no-repeat,linear-gradient(#fff,#fff) center/6px 100% no-repeat,#1c2f77}
+#toast{position:absolute;left:50%;top:48px;transform:translate(-50%,-12px);z-index:6;padding:5px 11px;border-radius:12px;font-size:9.5px;font-weight:700;color:#04170f;background:var(--g);opacity:0;transition:all .4s;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.splash{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#060d0b;z-index:8;transition:opacity .6s}
+.splash .aico{width:70px;height:70px;border-radius:17px;font-size:19px}
+.splash.hide{opacity:0;pointer-events:none}
+
+/* ios dialog */
+#dim{position:absolute;inset:0;z-index:50;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .3s;display:flex;align-items:center;justify-content:center}
+#dim.on{opacity:1}
+.dlg{width:176px;border-radius:14px;background:rgba(48,48,52,.94);backdrop-filter:blur(20px);text-align:center;overflow:hidden;transform:scale(1.1);transition:transform .3s}
+#dim.on .dlg{transform:none}
+.dlg .t{padding:13px 12px 6px;font-size:11.5px;font-weight:700;line-height:1.3}
+.dlg .d{padding:0 12px 12px;font-size:9px;line-height:1.35;color:#d0d0d4}
+.dlg .row{display:flex;border-top:1px solid rgba(255,255,255,.14)}
+.dlg .row div{flex:1;padding:9px 0;font-size:11.5px;color:#4da3ff;transition:background .12s}
+.dlg .row div+div{border-left:1px solid rgba(255,255,255,.14);font-weight:700}
+.dlg .pressed{background:rgba(255,255,255,.18);filter:none;transform:none}
+.dlg .hl{outline:none;animation:none;background:rgba(255,255,255,.1)}
+
+#finger{position:absolute;z-index:80;left:119px;top:470px;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.55) 0%,rgba(255,255,255,.28) 55%,rgba(255,255,255,.1) 100%);
+  border:1px solid rgba(255,255,255,.5);box-shadow:0 4px 14px rgba(0,0,0,.45);opacity:0;pointer-events:none;
+  transition:left .65s cubic-bezier(.45,.05,.2,1),top .65s cubic-bezier(.45,.05,.2,1),opacity .3s,transform .15s}
+#finger.press{transform:scale(.7)}
+
+/* tip callout with arrow */
+#tip{position:absolute;z-index:79;left:0;top:0;padding:4px 10px;border-radius:9px;background:#0b110e;color:#eafff5;
+  border:1px solid rgba(61,220,151,.6);font-size:9.5px;font-weight:700;letter-spacing:.005em;white-space:nowrap;
+  box-shadow:0 8px 20px rgba(0,0,0,.55),0 0 16px rgba(61,220,151,.28);opacity:0;pointer-events:none;
+  transition:opacity .25s,margin .25s}
+#tip.on{opacity:1}
+#tip.up{margin-top:5px}#tip.up.on{margin-top:0}
+#tip.down{margin-top:-5px}#tip.down.on{margin-top:0}
+#tip::after{content:"";position:absolute;left:var(--ax,50%);width:7px;height:7px;background:#0b110e;transform:translateX(-50%) rotate(45deg)}
+#tip.up::after{bottom:-4.5px;border-right:1px solid rgba(61,220,151,.6);border-bottom:1px solid rgba(61,220,151,.6)}
+#tip.down::after{top:-4.5px;border-left:1px solid rgba(61,220,151,.6);border-top:1px solid rgba(61,220,151,.6)}
+
+#sweep{position:absolute;top:-10%;bottom:-10%;width:70px;left:-120px;z-index:40;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);filter:blur(6px)}
+#sweep.go{animation:sw 1.6s ease-in-out forwards}
+@keyframes sw{to{left:420px}}
+#fade{position:absolute;inset:0;background:#000;opacity:0;z-index:90;pointer-events:none;transition:opacity 1.4s ease}
+
+#ctl{display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:8px;font-size:12px;color:#9aa0ab;max-width:100%}
+#ctl button{font:inherit;color:#e9ebf0;background:#15161b;border:1px solid #262830;border-radius:10px;padding:6px 12px;cursor:pointer}
+#ctl button:focus-visible{outline:2px solid #3ddc97;outline-offset:2px}
+#prog{width:110px;height:3px;border-radius:2px;background:#1f2128;overflow:hidden}
+#prog i{display:block;height:100%;width:0;background:#3ddc97}
+@media (prefers-reduced-motion:reduce){.dots i,#pwr.busy,.hl,#ld i,.orb,.srv.testing .v{animation:none}}
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="stage">
+    <div class="orb o1"></div><div class="orb o2"></div>
+    <div id="info" class="hidden">
+      <div id="segs"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div id="ititle"></div>
+      <div id="ibody"></div>
+      <div id="recap"><span>✓ Бот</span><span>✓ Кабинет</span><span>✓ Конфигурация</span><span>✓ INCY</span><span>✓ Подписка</span><span>✓ Лучший сервер</span><span>✓ Подключение</span></div>
+    </div>
+    <div id="rig">
+      <div id="phone"><div id="screen"></div></div>
+    </div>
+    <div id="sweep"></div>
+    <div id="fade"></div>
+  </div>
+</div>
+
+<div id="ctl">
+  <button id="bPlay" type="button">Пауза</button>
+  <button id="bRe" type="button">Сначала</button>
+  <div id="prog"><i id="progi"></i></div>
+  <span id="time">0:00 / 1:09</span>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const wrap=$('#wrap'),stage=$('#stage'),rig=$('#rig'),phone=$('#phone'),screenEl=$('#screen');
+
+function fit(){
+  const s=Math.min(innerWidth/360,(innerHeight-70)/640);
+  wrap.style.width=360*s+'px';wrap.style.height=640*s+'px';
+  stage.style.transform='scale('+s+')';
+}
+addEventListener('resize',fit);fit();
+
+/* ================= timeline clock ================= */
+let clock=0,last=performance.now(),playing=false,runId=0,waiters=[];
+const TOTAL=69;
+function flush(){
+  waiters=waiters.filter(w=>{
+    if(w.id!==runId){w.rej(new Error('stop'));return false}
+    if(clock>=w.t){w.res();return false}
+    return true;
+  });
+}
+const fmt=s=>{s=Math.floor(Math.min(s,TOTAL));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function frame(now){
+  const dt=(now-last)/1000;last=now;
+  if(playing){clock+=Math.min(dt,.1);flush()}
+  $('#progi').style.width=(Math.min(clock,TOTAL)/TOTAL*100)+'%';
+  $('#time').textContent=fmt(clock)+' / '+fmt(TOTAL);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+const at=t=>new Promise((res,rej)=>waiters.push({t,res,rej,id:runId}));
+const after=d=>at(clock+d);
+
+/* ================= servers (as in the real INCY screen) ================= */
+const SERVERS=[
+  ['eu','⭐Автовыбор','VLESS · TCP · TLS · JSON',100],
+  ['eu','⭐Обход глушилок - 1','VLESS · GRPC · REALITY · JSON',64],
+  ['eu','⭐Обход глушилок - 2','VLESS · TCP · TLS · JSON',76],
+  ['eu','⭐Обход глушилок - 3','Hysteria2 · HYSTERIA · TLS · JSON',161],
+  ['eu','⭐Обход глушилок - 4','VLESS · TCP · TLS · JSON',139],
+  ['ch','Швейцария','Можно торренты · JSON',187],
+  ['ro','Румыния','VLESS · TCP · TLS · JSON',172],
+  ['nl','Нидерланды','VLESS · TCP · TLS · JSON',132],
+  ['ee','Эстония','VLESS · TCP · TLS · JSON',85],
+  ['fr','Франция','VLESS · TCP · TLS · JSON',134],
+  ['gb','Британия','VLESS · TCP · TLS · JSON',135]
+];
+const dotCls=ms=>ms<90?'g':'y';
+const rowsHtml=SERVERS.map((s,i)=>`<div class="srv${i===0?' sel':''}" id="row${i}"><i class="fl ${s[0]}">${s[0]==='eu'?'★':''}</i><div class="t"><b>${s[1]}</b><span>${s[2]}</span></div><div class="p"><em class="bt">лучший</em><i class="dot ${dotCls(s[3])}"></i><span class="v">${s[3]}ms</span></div></div>`).join('');
+
+/* ================= screen markup ================= */
+const SCREEN=`
+<div id="island"></div>
+<div id="status"><span>9:41</span><span class="r"><span id="vpnbadge">VPN</span>
+  <svg width="16" height="10" viewBox="0 0 16 10" fill="#fff"><rect x="0" y="6" width="3" height="4" rx=".8"/><rect x="4.3" y="4" width="3" height="6" rx=".8"/><rect x="8.6" y="2" width="3" height="8" rx=".8"/><rect x="12.9" y="0" width="3" height="10" rx=".8"/></svg>
+  <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M1 3.5a8 8 0 0 1 12 0M3.2 6a5 5 0 0 1 7.6 0"/><circle cx="7" cy="8.5" r=".9" fill="#fff" stroke="none"/></svg>
+  <svg width="22" height="10" viewBox="0 0 22 10"><rect x=".5" y=".5" width="18" height="9" rx="2.6" fill="none" stroke="#fff" opacity=".5"/><rect x="2" y="2" width="15" height="6" rx="1.6" fill="#fff"/><rect x="19.5" y="3.2" width="1.6" height="3.6" rx=".8" fill="#fff" opacity=".5"/></svg>
+</span></div>
+
+<div id="home" class="app on">
+  <svg class="wall" viewBox="0 0 238 508" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#080b2a"/><stop offset=".36" stop-color="#26246a"/>
+        <stop offset=".56" stop-color="#7a4a97"/><stop offset=".7" stop-color="#e88a73"/><stop offset="1" stop-color="#f6b583"/>
+      </linearGradient>
+      <radialGradient id="moon" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff6e0" stop-opacity=".95"/><stop offset=".35" stop-color="#fff6e0" stop-opacity=".25"/><stop offset="1" stop-color="#fff6e0" stop-opacity="0"/></radialGradient>
+      <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a5aa8"/><stop offset="1" stop-color="#4a3a86"/></linearGradient>
+      <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d2f78"/><stop offset="1" stop-color="#241d55"/></linearGradient>
+      <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f1850"/><stop offset="1" stop-color="#110c30"/></linearGradient>
+      <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffcfb0" stop-opacity="0"/><stop offset="1" stop-color="#ffcfb0" stop-opacity=".38"/></linearGradient>
+    </defs>
+    <rect width="238" height="508" fill="url(#sky)"/>
+    <g fill="#fff"><circle cx="30" cy="40" r=".7"/><circle cx="70" cy="22" r=".6"/><circle cx="110" cy="62" r=".7"/><circle cx="150" cy="30" r=".6"/><circle cx="205" cy="52" r=".7"/><circle cx="22" cy="96" r=".6"/><circle cx="96" cy="104" r=".6"/><circle cx="218" cy="124" r=".5"/><circle cx="58" cy="146" r=".5"/><circle cx="130" cy="130" r=".5"/><circle cx="12" cy="150" r=".5"/></g>
+    <circle cx="176" cy="92" r="30" fill="url(#moon)"/><circle cx="176" cy="92" r="9" fill="#fff6e0"/>
+    <path d="M0 338 L30 292 L56 318 L96 256 L130 308 L160 282 L200 322 L238 288 L238 508 L0 508Z" fill="url(#m1)"/>
+    <g fill="#fff"><polygon points="96,256 86,273 92,269 97,277 103,267 110,274" opacity=".85"/><polygon points="160,282 153,294 158,291 162,297 167,290 171,295" opacity=".7"/><polygon points="30,292 24,302 28,300 32,305 36,299" opacity=".6"/></g>
+    <rect x="0" y="300" width="238" height="60" fill="url(#mist)"/>
+    <path d="M0 392 L40 322 L72 366 L120 302 L172 370 L206 338 L238 372 L238 508 L0 508Z" fill="url(#m2)"/>
+    <g fill="#fff"><polygon points="120,302 111,319 117,315 122,323 128,313 134,320" opacity=".5"/><polygon points="40,322 33,335 38,332 42,338 47,331" opacity=".42"/></g>
+    <rect x="0" y="350" width="238" height="70" fill="url(#mist)" opacity=".8"/>
+    <path d="M0 452 L50 386 L92 436 L142 372 L192 430 L238 398 L238 508 L0 508Z" fill="url(#m3)"/>
+    <rect x="0" y="420" width="238" height="60" fill="url(#mist)" opacity=".5"/>
+    <path d="M0 486 L26 466 L64 490 L118 460 L170 490 L212 466 L238 482 L238 508 L0 508Z" fill="#07051c"/>
+    <g fill="#05031a"><path d="M8 508 L15 478 L22 508Z"/><path d="M20 508 L26 486 L32 508Z"/><path d="M196 508 L204 474 L212 508Z"/><path d="M210 508 L217 482 L224 508Z"/><path d="M180 508 L186 488 L192 508Z"/><path d="M96 508 L102 490 L108 508Z"/></g>
+  </svg>
+  <div class="grid">
+    <div class="ico tg" id="tgicon"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M20.7 3.6 2.9 10.5c-1.2.5-1.2 1.2-.2 1.5l4.5 1.4 1.7 5.3c.2.6.1.8.7.8.5 0 .7-.2 1-.5l2.2-2.2 4.6 3.4c.8.5 1.5.2 1.7-.8l3-14.3c.3-1.2-.4-1.7-1.4-1.3zM8.5 13.1l9.1-5.7c.4-.3.8-.1.5.2l-7.4 6.7-.3 3.2z"/></svg></div>
+    <div class="ico a"></div><div class="ico b"></div><div class="ico c"></div>
+    <div class="ico b"></div><div class="ico c"></div><div class="ico a"></div><div class="ico b"></div>
+  </div>
+</div>
+
+<div id="tg" class="app">
+  <div class="tghead"><span class="back">‹</span><div class="av">V</div><div><div class="nm">VPN</div><div class="st">бот</div></div></div>
+  <div id="msgs"></div>
+  <div class="tginput"><div id="inp"></div><div class="send" id="send"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M3 20.5 21 12 3 3.5l1.6 7.4L15 12 4.6 13.1z"/></svg></div></div>
+</div>
+
+<div id="install" class="app">
+  <div class="sheet-bar"><span>✕</span>VPN<span>⋯</span></div>
+  <div id="pg">
+    <div class="phead">
+      <div><b>VPN</b><span class="sub">ЛИЧНЫЙ КАБИНЕТ</span></div>
+      <div class="pbtns">
+        <i class="pb w">RU</i>
+        <i class="pb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#dfe5f2" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></i>
+        <i class="pb"><svg width="10" height="10" viewBox="0 0 24 24" fill="#8fb4e8"><path d="M20.7 3.6 2.9 10.5c-1.2.5-1.2 1.2-.2 1.5l4.5 1.4 1.7 5.3c.2.6.1.8.7.8.5 0 .7-.2 1-.5l2.2-2.2 4.6 3.4c.8.5 1.5.2 1.7-.8l3-14.3c.3-1.2-.4-1.7-1.4-1.3z"/></svg></i>
+      </div>
+    </div>
+    <div class="card">
+      <div class="lab">Подписка</div>
+      <div class="tiles">
+        <div class="tile ok"><div class="lab">Статус конфига</div><b>✓ Активна</b></div>
+        <div class="tile"><div class="lab">Лимит устройств</div><b>0 из 3</b></div>
+        <div class="tile"><div class="lab">Остаток трафика</div><b>Без лимита</b></div>
+      </div>
+      <div class="lab" style="margin-top:9px">Идентификатор конфигурации</div>
+      <div class="idbox"><b>2281800</b></div>
+    </div>
+    <div class="card" id="instcard">
+      <div class="pgh"><b>Установка</b><span class="pill" id="ospill">iOS ⌄</span>
+        <div class="dd" id="dd">
+          <div class="cur" id="osios">iOS</div><div>Android</div><div class="sep"></div>
+          <div>macOS</div><div>Windows</div><div>Linux</div><div class="sep"></div>
+          <div>Android TV</div><div>Apple TV</div>
+        </div>
+      </div>
+      <div class="chips">
+        <div class="chip on"><div class="mini">INCY</div><div><b>INCY</b><span>Для iOS, Android, macOS, Windows</span></div></div>
+        <div class="chip h"><div class="mini">H</div><div><b>Happ</b><span>Официальный клиент</span></div></div>
+      </div>
+      <div class="stp"><div class="n">1</div><div><h4>Установка приложения</h4><p>Откройте App Store и установите INCY. При первом запуске разрешите добавление VPN-конфигурации и введите пароль устройства.</p>
+        <div class="sbtn" id="appbtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="#cdd5e5"><rect x="3" y="3" width="18" height="18" rx="5" opacity=".35"/><path d="M8 16l5-9M10.5 16l5-9M7 13h10" stroke="#cdd5e5" stroke-width="1.5" fill="none"/></svg><div><small>ЗАГРУЗИТЬ В</small><b>App Store</b></div></div></div></div>
+      <div class="stp" id="stp2"><div class="n">2</div><div><h4>Добавление подписки</h4><p>Нажмите кнопку ниже — INCY откроется и подписка добавится. Если не сработает, скопируйте ссылку и добавьте её в INCY вручную.</p>
+        <div class="gbtn" id="addsub">+ Добавить подписку</div></div></div>
+      <div class="stp" style="padding-bottom:0"><div class="n d">✓</div><div><h4>Готово!</h4><p>Выберите сервер и нажмите кнопку подключения — наслаждайтесь!</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="incy" class="app">
+  <div id="iscroll">
+    <div class="itabs"><span class="tab on">TUN</span><span class="tab">Системный прокси</span></div>
+    <div id="pwr"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8M6.4 6.6a8 8 0 1 0 11.2 0"/></svg></div>
+    <div id="pst">Нажмите для подключения</div>
+    <div class="note">⚡ Проблемы с подключением? Нажмите кнопку спидометра и выберите сервер, где появились цифры скорости.<br>🔄 Обновляйте подписку — новые конфиги и резервы появляются регулярно.</div>
+    <div class="irow"><div class="ibtn">＋ Добавить</div><div class="ibtn">Вставить</div></div>
+    <div class="ilab">ТЕКУЩАЯ ПОДПИСКА</div>
+    <div class="icard">
+      <div class="ihd"><i class="star">★</i><div class="hn"><b>★ VPN</b><small>6 ч</small></div><span class="cnt">11</span><span class="ic">↻</span><span class="ic" id="speed"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9fd8c0" stroke-width="2.2" stroke-linecap="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-6"/></svg></span><span class="ic">⋯</span></div>
+      <div id="ld"><i></i>Загрузка подписки…</div>
+      <div id="rows">${rowsHtml}</div>
+    </div>
+    <div style="height:36px"></div>
+  </div>
+  <div id="itop"></div>
+  <div id="toast">✓ Подписка добавлена</div>
+  <div class="splash" id="splash"><div class="aico">INCY</div></div>
+</div>
+
+<div id="asheet"><div class="rw"><div class="aico">INCY</div><div><b>INCY</b><span>App Store</span></div><div class="getbtn" id="getbtn">Получить</div></div></div>
+
+<div id="dim"><div class="dlg">
+  <div class="t">«INCY» хочет добавить конфигурации VPN</div>
+  <div class="d">Все сетевые операции на этом iPhone могут фильтроваться или отслеживаться при использовании VPN.</div>
+  <div class="row"><div>Не разрешать</div><div id="allow">Разрешить</div></div>
+</div></div>
+
+<div id="tip"></div>
+<div id="finger"></div>
+<div id="homebar"></div>
+<div id="glare"></div>
+`;
+
+/* ================= helpers ================= */
+const BASE_Y=56;
+function cam(x,y,s,r,dur){
+  rig.style.transition='transform '+dur+'s cubic-bezier(.45,.05,.2,1)';
+  rig.style.transform='translate('+x+'px,'+y+'px) scale('+s+') rotate('+r+'deg)';
+}
+function card(title,body,seg,final){
+  const info=$('#info');
+  info.classList.add('swap');
+  setTimeout(()=>{
+    $('#ititle').textContent=title;
+    $('#ibody').textContent=body;
+    info.classList.toggle('final',!!final);
+    info.classList.remove('hidden');
+    document.querySelectorAll('#segs i').forEach((e,i)=>e.classList.toggle('on',i<seg));
+    info.classList.remove('swap');
+  },300);
+}
+function geo(el){
+  const sr=screenEl.getBoundingClientRect();
+  const k=sr.width/screenEl.offsetWidth;
+  const r=el.getBoundingClientRect();
+  return {L:(r.left-sr.left)/k,T:(r.top-sr.top)/k,W:r.width/k,H:r.height/k};
+}
+function placeTip(el,label){
+  const tip=$('#tip'),g=geo(el);
+  tip.classList.remove('on','up','down');
+  tip.textContent=label;
+  tip.style.left='0px';tip.style.top='0px';
+  const w=tip.offsetWidth,h=tip.offsetHeight,sw=screenEl.offsetWidth;
+  const cx=g.L+g.W/2;
+  const left=Math.min(Math.max(cx-w/2,8),sw-8-w);
+  const up=g.T>96;
+  const top=up?g.T-h-10:g.T+g.H+10;
+  tip.classList.add(up?'up':'down');
+  tip.style.left=left+'px';tip.style.top=top+'px';
+  tip.style.setProperty('--ax',Math.min(Math.max(cx-left,10),w-10)+'px');
+  requestAnimationFrame(()=>tip.classList.add('on'));
+}
+async function tap(el,label){
+  const f=$('#finger'),tip=$('#tip');
+  el.classList.add('hl');
+  const g=geo(el);
+  placeTip(el,label||'Нажмите');
+  f.style.opacity=1;f.style.left=(g.L+g.W/2)+'px';f.style.top=(g.T+g.H/2)+'px';
+  await after(.9);
+  f.classList.add('press');el.classList.add('pressed');
+  tip.classList.remove('on');
+  await after(.2);
+  f.classList.remove('press');
+  await after(.12);
+  el.classList.remove('pressed','hl');
+  f.style.opacity=0;
+}
+function msg(html,side,btns){
+  const m=document.createElement('div');m.className='m '+side;
+  m.innerHTML='<div class="b">'+html+'<span class="tm">9:41</span></div>';
+  if(btns){
+    const k=document.createElement('div');k.className='kb';
+    btns.forEach(t=>{const b=document.createElement('div');b.className='kbtn'+(t.ext?' ext':'');b.textContent=t.t||t;k.appendChild(b)});
+    m.appendChild(k);
+  }
+  $('#msgs').appendChild(m);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>m.classList.add('in')));
+  return m;
+}
+function typing(){
+  const m=document.createElement('div');m.className='m bot';
+  m.innerHTML='<div class="b" style="padding-right:12px"><div class="dots"><i></i><i></i><i></i></div></div>';
+  $('#msgs').appendChild(m);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>m.classList.add('in')));
+  return m;
+}
+const show=id=>$(id).classList.add('on');
+const hide=id=>$(id).classList.remove('on');
+function scrollPg(el,pad){
+  const y=Math.max(0,el.offsetTop-(pad||0));
+  $('#pg').style.transform='translateY(-'+y+'px)';
+}
+/* INCY inner scroll */
+let curScroll=0;
+function iscrollTo(y){curScroll=Math.max(0,y);$('#iscroll').style.transform='translateY(-'+curScroll+'px)'}
+function ensureVisible(el){
+  const vh=462;
+  const need=el.offsetTop+el.offsetHeight-vh+26;
+  if(need>curScroll)iscrollTo(need);
+}
+async function pingTest(){
+  const rows=[...document.querySelectorAll('.srv')];
+  rows.forEach(r=>{r.querySelector('.v').textContent='…';r.querySelector('.dot').className='dot';r.classList.add('testing')});
+  let best=0;
+  for(let i=0;i<rows.length;i++){
+    await after(.42);
+    const ms=SERVERS[i][3],r=rows[i];
+    r.querySelector('.v').textContent=ms+'ms';
+    r.querySelector('.dot').className='dot '+dotCls(ms);
+    r.classList.remove('testing');
+    if(ms<SERVERS[best][3])best=i;
+    ensureVisible(r);
+  }
+  return best;
+}
+
+function resetAll(){
+  screenEl.innerHTML=SCREEN;
+  curScroll=0;
+  phone.classList.remove('in','gloss');
+  stage.classList.remove('floor');
+  $('#sweep').classList.remove('go');
+  $('#info').classList.add('hidden');$('#info').classList.remove('final','swap');
+  document.querySelectorAll('#segs i').forEach(e=>e.classList.remove('on'));
+  $('#fade').style.transition='none';$('#fade').style.opacity=0;
+  void $('#fade').offsetWidth;
+  $('#fade').style.transition='';
+  rig.style.transition='none';
+  rig.style.transform='translate(0,'+BASE_Y+'px) scale(.9) rotate(0deg)';
+}
+
+/* ================= the film (no sound) ================= */
+async function run(){
+  resetAll();
+
+  /* Вступление */
+  await at(.3); phone.classList.add('in');
+  await after(.1); cam(0,BASE_Y+2,.93,0,12);
+  await at(.8); card('Подключение VPN на iPhone','Покажем весь путь: бот в Telegram → приложение INCY → проверка пинга → самый быстрый сервер → подключение.',0);
+
+  /* Шаг 1 — бот */
+  await at(4.0); card('Шаг 1 · Откройте бота','Запустите Telegram, откройте бота и отправьте ему команду /start.',1);
+  await at(4.6); await tap($('#tgicon'),'Откройте Telegram');
+  $('#home').classList.add('off');show('#tg');
+  await at(6.2);
+  const inp=$('#inp');
+  for(const ch of '/start'){inp.textContent+=ch;await after(.1)}
+  $('#send').classList.add('act');
+  await at(7.1); await tap($('#send'),'Отправьте');
+  inp.textContent='';$('#send').classList.remove('act');
+  msg('/start','me');
+  await at(8.5);
+  let t=typing(); await after(.7); t.remove();
+
+  /* Шаг 2 — личный кабинет */
+  let m=msg('👤 <b>Ваш личный кабинет</b> | ID: <code>5</code><div class="sp"></div>💰 <b>Ваш баланс:</b> <code>1000.00 ₽</code><br>🔐 <b>Активных конфигураций:</b> <code>1</code> шт.<div class="sp"></div>💳 <b>Тариф за конфиг/сутки:</b> <code>6.66 ₽</code><div class="sp"></div>⚙️ <b>Плата за конфигурации в день:</b> <code>6.66 ₽</code><br>⏳ <b>Баланса хватит примерно на:</b> <code>150 дн.</code><div class="sp"></div>👇 <i>Выберите действие:</i>','bot',['🔐 Мои конфигурации','💰 Пополнить баланс','📢 Пригласить',{t:'📞 Техподдержка',ext:1},{t:'📣 Канал',ext:1},{t:'📄 Политика',ext:1}]);
+  await at(9.4); card('Шаг 2 · Личный кабинет','Сразу откроется ваш кабинет: баланс, тариф и число подключений. Нажмите «Мои конфигурации».',2);
+  await at(12.6); await tap(m.querySelector('.kbtn'),'Мои конфигурации');
+  m=msg('🔐 <b>Ваши конфигурации</b> · 1 шт.<div class="sp"></div>Нажмите на конфигурацию, чтобы получить ссылку для подключения, QR-код или удалить её.<div class="sp"></div>💳 Каждая конфигурация — <b>6.66 ₽</b> в сутки.','bot',['🌐 #2277252','➕ Создать конфигурацию','⬅️ Назад']);
+
+  /* Шаг 3 — создание */
+  await at(14.5); card('Шаг 3 · Создайте конфигурацию','Нажмите «Создать конфигурацию». Бот за несколько секунд подготовит для вас новое подключение.',3);
+  await at(15.6); await tap(m.querySelectorAll('.kbtn')[1],'Создать');
+  t=typing();
+  await at(18.0); t.remove();
+  m=msg('🎉 <b>Конфигурация успешно создана!</b><br>Ниже вы найдёте всю информацию и кнопку для настройки подключения.<div class="sp"></div>🔐 <b>Конфигурация VLESS</b><div class="sp"></div><b>ID:</b> <code>2281800</code><div class="sp"></div>🌐 <b>Страница подключения:</b><code class="url">https://••••••••/sub/••••••••••••</code><div class="sp"></div>➡️ <i>Нажмите «📥 Настроить подключение», чтобы начать настройку.</i>','bot',[{t:'📥 Настроить подключение',ext:1},'📷 Сгенерировать QR','🗑️ Удалить конфиг','⬅️ Назад']);
+  await at(18.5); card('Конфигурация VLESS готова','Ссылка подключения скрыта — это ваш личный ключ, его нельзя показывать другим. Нажмите «Настроить подключение».',3);
+  await at(21.0); await tap(m.querySelector('.kbtn'),'Настроить');
+
+  /* Шаг 4 — страница установки */
+  show('#install');
+  await at(22.4); card('Шаг 4 · Выберите iOS и установите INCY','Откроется страница подключения. Проверьте систему — должна стоять iOS. Затем скачайте INCY из App Store.',4);
+  await at(24.2); await tap($('#ospill'),'Выбор системы');
+  $('#dd').classList.add('on');
+  await at(26.2); await tap($('#osios'),'Выберите iOS');
+  $('#dd').classList.remove('on');
+  await at(27.6); scrollPg($('#instcard'),30);
+  await at(29.0); await tap($('#appbtn'),'Скачать');
+  show('#asheet');
+  await at(31.5); await tap($('#getbtn'),'Получить');
+  $('#getbtn').innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5ab0ff" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="12" r="10" opacity=".2"/><circle class="ring" id="ringc" cx="12" cy="12" r="10" transform="rotate(-90 12 12)"/></svg>';
+  await after(.1); $('#ringc').classList.add('go');
+  await at(35.0); $('#getbtn').textContent='Открыть';
+  await at(35.8); hide('#asheet');
+
+  /* Шаг 5 — подписка */
+  await at(36.0); card('Шаг 5 · Добавьте подписку','Вернитесь на страницу и нажмите «Добавить подписку». INCY откроется сам. Разрешите добавление VPN и, если попросит, введите пароль iPhone.',5);
+  await at(36.6); scrollPg($('#stp2'),70);
+  await at(38.0); await tap($('#addsub'),'Добавить');
+  hide('#tg');hide('#install');show('#incy');
+  await at(40.4); $('#splash').classList.add('hide');
+  await at(41.2); $('#dim').classList.add('on');
+  await at(42.8); await tap($('#allow'),'Разрешить');
+  $('#dim').classList.remove('on');
+  await at(44.4); card('Подписка добавлена','Настройки загрузились автоматически — вручную ничего вводить не нужно. Сейчас появится список серверов.',5);
+  $('#toast').classList.add('on');
+  await at(45.8); $('#ld').style.display='none';$('#rows').classList.add('on');
+  await at(47.0); $('#toast').classList.remove('on');
+
+  /* Шаг 6 — тест пинга и лучший сервер */
+  card('Шаг 6 · Проверьте пинг серверов','Нажмите значок спидометра: INCY измерит скорость отклика каждого сервера. Чем меньше число в мс, тем быстрее сервер.',6);
+  await at(47.8); await tap($('#speed'),'Проверка пинга');
+  const best=await pingTest();
+  await at(54.0);
+  const rows=[...document.querySelectorAll('.srv')];
+  rows[best].classList.add('best');
+  card('Лучший пинг — '+SERVERS[best][3]+' мс','Самый маленький пинг у сервера «'+SERVERS[best][1].replace('⭐','')+'». Выбираем его: он отвечает быстрее остальных.',6);
+  iscrollTo(rows[best].offsetTop-150);
+  await at(55.8); await tap(rows[best],'Лучший пинг · '+SERVERS[best][3]+' мс');
+  rows[0].classList.remove('sel');rows[best].classList.add('sel');
+
+  /* Шаг 7 — подключение */
+  await at(57.4); iscrollTo(0);
+  card('Шаг 7 · Включите VPN','Сервер выбран. Нажмите большую круглую кнопку вверху экрана.',7);
+  await at(59.0); await tap($('#pwr'),'Включить');
+  $('#pwr').classList.add('busy');$('#pst').textContent='Подключение…';
+  await at(62.0);
+  $('#pwr').classList.remove('busy');$('#pwr').classList.add('live');
+  $('#pst').textContent='Подключено';$('#pst').classList.add('live');
+  await after(.5); $('#vpnbadge').classList.add('on');
+  await at(62.6); card('VPN подключён','Кнопка стала зелёной, а вверху экрана появился значок VPN — ваше соединение защищено.',7);
+  await at(63.8); cam(0,BASE_Y+4,.88,0,3.0);
+
+  /* Финал */
+  await at(65.4);
+  stage.classList.add('floor');
+  phone.classList.add('gloss');
+  cam(0,BASE_Y+34,.78,-2.5,3.4);
+  card('Готово! VPN настроен и готов к использованию','Чтобы отключить VPN, нажмите ту же кнопку в INCY.',7,true);
+  await at(66.4); $('#sweep').classList.add('go');
+  await at(67.6); $('#fade').style.opacity=1;
+  await at(TOTAL);
+}
+
+/* ================= controls ================= */
+function begin(){
+  runId++;flush();
+  clock=0;playing=true;$('#bPlay').textContent='Пауза';
+  run().catch(()=>{});
+}
+$('#bPlay').onclick=()=>{playing=!playing;$('#bPlay').textContent=playing?'Пауза':'Продолжить'};
+$('#bRe').onclick=begin;
+begin();
+</script>
+</body>
+</html>
